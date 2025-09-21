@@ -1,0 +1,114 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+enum LectureStatus {
+  QUEUED
+  TRANSCRIBING
+  SUMMARIZING
+  READY
+  FAILED
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  FAILED
+  DONE
+}
+
+enum JobType {
+  TRANSCRIPTION
+  SUMMARIZATION
+  EMBEDDING
+}
+
+model Lecture {
+  id        String        @id @default(uuid())
+  title     String?
+  language  String?
+  status    LectureStatus @default(QUEUED)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  audioFiles      AudioFile[]
+  transcription   Transcription?
+  notes           NoteArtifact?
+  Job             Job[]
+}
+
+model AudioFile {
+  id         String   @id @default(uuid())
+  lectureId  String
+  storageUrl String
+  byteSize   Int
+  mimeType   String
+  durationMs Int?
+  createdAt  DateTime @default(now())
+
+  lecture Lecture @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+
+  @@index([lectureId])
+}
+
+model Transcription {
+  id        String                 @id @default(uuid())
+  lectureId String                 @unique
+  text      String?
+  createdAt DateTime               @default(now())
+  segments  TranscriptionSegment[]
+
+  lecture Lecture @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+  @@index([lectureId])
+}
+
+model TranscriptionSegment {
+  id              String  @id @default(uuid())
+  transcriptionId String
+  startMs         Int
+  endMs           Int
+  text            String
+  speakerLabel    String?
+  idx             Int
+
+  transcription Transcription @relation(fields: [transcriptionId], references: [id], onDelete: Cascade)
+
+  @@index([transcriptionId])
+}
+
+model NoteArtifact {
+  id        String   @id @default(uuid())
+  lectureId String   @unique
+  json      Json
+  createdAt DateTime @default(now())
+
+  lecture Lecture @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+
+  @@index([lectureId])
+}
+
+model Job {
+  id        String    @id @default(uuid())
+  lectureId String
+  type      JobType
+  status    JobStatus
+  error     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  lecture Lecture @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+
+  @@index([lectureId])
+}
