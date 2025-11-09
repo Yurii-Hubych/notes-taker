@@ -1,27 +1,25 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
-import { LectureService } from './lecture.service';
-import { CreateLectureDto } from './dto/create-lecture.dto';
-import { UpdateLectureDto } from './dto/update-lecture.dto';
+import { Body, Controller, Post } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import type { LectureJob } from '../types/lecture-job';
 
-@Controller('lecture')
+@Controller('lectures')
 export class LectureController {
-  constructor(private readonly lectureService: LectureService) {}
+  constructor(
+    @InjectQueue('lecture-jobs') private readonly queue: Queue<LectureJob>,
+  ) {}
 
-  @Post()
-  create(@Body() createLectureDto: CreateLectureDto) {
-    return this.lectureService.create(createLectureDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.lectureService.findAll();
+  @Post('enqueue')
+  async enqueue(@Body() body: LectureJob) {
+    if (!body?.lectureId || !body?.fileUrl) {
+      return { ok: false, error: 'lectureId and fileUrl are required' };
+    }
+    const job = await this.queue.add('lecture', body, {
+      attempts: 1,
+      backoff: { type: 'exponential', delay: 10_000 },
+      removeOnComplete: true,
+      removeOnFail: false,
+    });
+    return { ok: true, jobId: job.id };
   }
 }
