@@ -43,7 +43,9 @@ export class PipelineService {
       const fullText = transcripts.join(' ');
 
       this.logger.stage('summarize');
-      const summary = await this.gpt.summarize(fullText);
+      const summary = await this.gpt.summarize(fullText, {
+        strictCoverage: job.strictCoverage,
+      });
 
       this.logger.stage('save');
       await this.db.saveResult({

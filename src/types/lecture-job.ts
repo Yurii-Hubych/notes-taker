@@ -2,6 +2,7 @@ export interface LectureJob {
   lectureId: string;
   fileUrl: string;
   userId?: string;
+  strictCoverage?: boolean;
 }
 
 export interface SaveResultInput {

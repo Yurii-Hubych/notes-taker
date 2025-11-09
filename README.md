@@ -100,6 +100,62 @@ $ npm run test:cov
 
 ## API Endpoints
 
+### Lecture Processing
+
+#### Enqueue Lecture Processing Job
+
+```http
+POST /api/lectures/enqueue
+Content-Type: application/json
+
+{
+  "lectureId": "unique-lecture-id",
+  "fileUrl": "https://example.com/audio.mp3",
+  "userId": "optional-user-id",
+  "strictCoverage": false
+}
+```
+
+**Parameters:**
+- `lectureId` (required): Unique identifier for the lecture
+- `fileUrl` (required): URL to the audio file to process
+- `userId` (optional): User identifier for tracking
+- `strictCoverage` (optional, default: `false`): Enable high-coverage mode
+
+**High-Coverage Mode (`strictCoverage: true`):**
+
+When enabled, the system uses a 2-step pipeline:
+1. **Topic Map Extraction**: Uses a cheaper model (gpt-4o-mini) to extract a comprehensive map of all topics, subtopics, examples, experiments, entities, formulas, and key terms
+2. **Enforced Coverage**: Passes the topic map to the main summarization model with strict instructions to cover ALL extracted elements
+
+This mode is ideal for:
+- Complex academic lectures with many concepts
+- Technical content with formulas and specialized terminology
+- Ensuring no important details are dropped
+- Lectures with multiple examples or experiments
+
+**Cost Consideration:** High-coverage mode adds one extra API call (using the cheaper model), so use it only when comprehensive coverage is critical.
+
+**Response:**
+```json
+{
+  "ok": true,
+  "jobId": "job-uuid"
+}
+```
+
+**Example with High-Coverage Mode:**
+```bash
+curl -X POST http://localhost:3000/lectures/enqueue \
+  -H "Content-Type: application/json" \
+  -d '{
+    "lectureId": "lecture-123",
+    "fileUrl": "https://example.com/biology-lecture.mp3",
+    "userId": "user-456",
+    "strictCoverage": true
+  }'
+```
+
 ### PDF Generation
 
 #### Enqueue PDF Generation Job

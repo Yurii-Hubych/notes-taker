@@ -9,6 +9,14 @@ export class LectureController {
     @InjectQueue('lecture-jobs') private readonly queue: Queue<LectureJob>,
   ) {}
 
+  /**
+   * Enqueue a lecture processing job.
+   *
+   * @param body.lectureId - Unique identifier for the lecture
+   * @param body.fileUrl - URL to the audio file
+   * @param body.userId - Optional user identifier
+   * @param body.strictCoverage - Optional: Enable high-coverage mode (2-step topic map extraction + enforced coverage)
+   */
   @Post('enqueue')
   async enqueue(@Body() body: LectureJob) {
     if (!body?.lectureId || !body?.fileUrl) {
