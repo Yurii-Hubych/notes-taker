@@ -34,14 +34,19 @@ export class SupabaseStorageService {
       .slice(0, 80);
   }
 
-  private buildPdfPath(lectureId: string, userId?: string, title?: string): string {
+  private buildPdfPath(
+    lectureId: string,
+    userId?: string,
+    title?: string,
+  ): string {
     const safeUserId =
       userId && userId.trim().length > 0 ? userId : 'anonymous';
-    
-    const filename = title && title.trim().length > 0
-      ? this.sanitizeFilename(title)
-      : lectureId;
-    
+
+    const filename =
+      title && title.trim().length > 0
+        ? this.sanitizeFilename(title)
+        : lectureId;
+
     return `${safeUserId}/${filename}.pdf`;
   }
 
@@ -88,4 +93,3 @@ export class SupabaseStorageService {
     return data.signedUrl;
   }
 }
-

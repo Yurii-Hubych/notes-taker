@@ -57,7 +57,7 @@ export class PdfController {
         query.userId = userId;
       }
       const lecture = await this.lectureResultModel.findOne(query).lean();
-      
+
       if (!lecture) {
         throw new NotFoundException('Lecture result not found');
       }
@@ -76,4 +76,3 @@ export class PdfController {
     }
   }
 }
-

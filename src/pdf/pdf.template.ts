@@ -1,10 +1,7 @@
 import { LectureResultDocument } from '../db/schemas/lecture-result.schema';
 
 function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function highlightSpecialContent(text: string): string {
@@ -15,10 +12,13 @@ function highlightSpecialContent(text: string): string {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-    
-    const isExampleLine = /^(Example\s+\d+|Step\s+\d+|Exercise\s+\d+|Note:|Important:|Definition:)/i.test(line);
+
+    const isExampleLine =
+      /^(Example\s+\d+|Step\s+\d+|Exercise\s+\d+|Note:|Important:|Definition:)/i.test(
+        line,
+      );
     const isNumberedStep = /^\d+[\.)]\s+/.test(line);
-    
+
     if (isExampleLine || isNumberedStep) {
       if (!inExample) {
         inExample = true;
@@ -27,7 +27,9 @@ function highlightSpecialContent(text: string): string {
         exampleBuffer.push(line);
       }
     } else if (line.length === 0 && inExample) {
-      processed.push(`<div class="example">${exampleBuffer.join('<br />')}</div>`);
+      processed.push(
+        `<div class="example">${exampleBuffer.join('<br />')}</div>`,
+      );
       exampleBuffer = [];
       inExample = false;
       processed.push(line);
@@ -38,32 +40,73 @@ function highlightSpecialContent(text: string): string {
     }
   }
 
-  // Flush remaining example buffer
   if (inExample && exampleBuffer.length > 0) {
-    processed.push(`<div class="example">${exampleBuffer.join('<br />')}</div>`);
+    processed.push(
+      `<div class="example">${exampleBuffer.join('<br />')}</div>`,
+    );
   }
 
   return processed.join('\n');
 }
 
-function processMathExpressions(text: string): string {
-  let result = text.replace(/\$([^\$]+)\$/g, '<span class="math-inline">$1</span>');
-  result = result.replace(/\\\(([^)]+)\\\)/g, '<span class="math-inline">$1</span>');
-  
-  result = result.replace(/\$\$([^\$]+)\$\$/g, '<div class="math-display">$1</div>');
-  result = result.replace(/\\\[([^\]]+)\\\]/g, '<div class="math-display">$1</div>');
-  
+function preserveMathAndEscape(text: string): string {
+  const mathPlaceholders: string[] = [];
+  let counter = 0;
+
+  let result = text.replace(/\$\$([\s\S]+?)\$\$/g, (match) => {
+    const placeholder = `__MATH_DISPLAY_${counter}__`;
+    mathPlaceholders.push(match);
+    counter++;
+    return placeholder;
+  });
+
+  result = result.replace(/\$([^\$\n]+?)\$/g, (match) => {
+    const placeholder = `__MATH_INLINE_${counter}__`;
+    mathPlaceholders.push(match);
+    counter++;
+    return placeholder;
+  });
+
+  // Extract LaTeX delimiters \[...\] and \(...\)
+  result = result.replace(/\\\[([\s\S]+?)\\\]/g, (match) => {
+    const placeholder = `__MATH_DISPLAY_${counter}__`;
+    mathPlaceholders.push(match);
+    counter++;
+    return placeholder;
+  });
+
+  result = result.replace(/\\\(([^)]+?)\\\)/g, (match) => {
+    const placeholder = `__MATH_INLINE_${counter}__`;
+    mathPlaceholders.push(match);
+    counter++;
+    return placeholder;
+  });
+
+  result = escapeHtml(result);
+
+  mathPlaceholders.forEach((math, index) => {
+    result = result.replace(`__MATH_DISPLAY_${index}__`, math);
+    result = result.replace(`__MATH_INLINE_${index}__`, math);
+  });
+
   return result;
+}
+
+function normalizeLatex(text: string): string {
+  return text
+    .replace(/\u000crac/g, '\\frac')
+    .replace(/(\$|\\\[|\\\()([^$\\]*)rac\{/g, '$1$2\\frac{');
 }
 
 export function toParagraphs(text: string): string {
   if (!text) return '';
 
-  const escaped = escapeHtml(text);
+  const normalized = normalizeLatex(text);
+  const escaped = preserveMathAndEscape(normalized);
   const withHighlights = highlightSpecialContent(escaped);
-  const withMath = processMathExpressions(withHighlights);
+  const content = withHighlights;
 
-  const paragraphs = withMath
+  const paragraphs = content
     .split(/\n\s*\n/)
     .map((para) => para.trim())
     .filter((para) => para.length > 0);
@@ -79,28 +122,28 @@ export function toParagraphs(text: string): string {
   return htmlParagraphs.join('\n');
 }
 
-export function buildLectureHtml(
-  lecture: LectureResultDocument | any,
-): string {
-  const title = lecture.title && lecture.title.trim().length > 0
-    ? lecture.title
-    : `Lecture ${lecture.lectureId}`;
-  
+export function buildLectureHtml(lecture: LectureResultDocument | any): string {
+  const title =
+    lecture.title && lecture.title.trim().length > 0
+      ? lecture.title
+      : `Lecture ${lecture.lectureId}`;
+
   const createdAt = lecture.createdAt
     ? new Date(lecture.createdAt).toLocaleString('en-US', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
       })
     : 'N/A';
 
   const userId = lecture.userId || 'Anonymous';
   const lectureId = lecture.lectureId || 'N/A';
 
-  const tocHtml = (lecture.outline && lecture.outline.length > 0)
-    ? `
+  const tocHtml =
+    lecture.outline && lecture.outline.length > 0
+      ? `
       <div class="toc">
         <h3>Table of Contents</h3>
         <ol>
@@ -108,20 +151,21 @@ export function buildLectureHtml(
         </ol>
       </div>
     `
-    : '';
+      : '';
 
   const keywords = (lecture.keywords ?? [])
     .map((kw: string) => `<span class="keyword">${escapeHtml(kw)}</span>`)
     .join(' ');
 
-  const keywordsHtml = (lecture.keywords && lecture.keywords.length > 0)
-    ? `
+  const keywordsHtml =
+    lecture.keywords && lecture.keywords.length > 0
+      ? `
       <div class="keywords-section">
         <h3>Key Terms</h3>
         <div class="keywords">${keywords}</div>
       </div>
     `
-    : '';
+      : '';
 
   const sections = (lecture.sections ?? [])
     .map(
@@ -305,20 +349,15 @@ export function buildLectureHtml(
       page-break-inside: avoid;
     }
     
-    /* ===== Math Rendering ===== */
-    .math-inline {
-      font-family: 'KaTeX_Main', 'Cambria Math', serif;
-      font-style: italic;
+    /* ===== Math Rendering (KaTeX) ===== */
+    .katex-display {
+      margin: 16px 0;
+      overflow-x: auto;
+      overflow-y: hidden;
     }
     
-    .math-display {
-      margin: 16px 0;
-      text-align: center;
-      font-size: 12pt;
-      padding: 12px;
-      background: #fafafa;
-      border-radius: 4px;
-      overflow-x: auto;
+    .katex {
+      font-size: 1.1em;
     }
     
     /* ===== Lists ===== */
@@ -409,9 +448,9 @@ export function buildLectureHtml(
       renderMathInElement(document.body, {
         delimiters: [
           {left: "$$", right: "$$", display: true},
-          {left: "\\\\[", right: "\\\\]", display: true},
+          {left: "\\[", right: "\\]", display: true},
           {left: "$", right: "$", display: false},
-          {left: "\\\\(", right: "\\\\)", display: false}
+          {left: "\\(", right: "\\)", display: false}
         ],
         throwOnError: false
       });
@@ -421,4 +460,3 @@ export function buildLectureHtml(
 </html>
 `;
 }
-

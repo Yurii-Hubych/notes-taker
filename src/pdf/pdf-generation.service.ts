@@ -25,7 +25,7 @@ export class PdfGenerationService {
     if (userId) {
       query.userId = userId;
     }
-    
+
     const lecture = await this.lectureResultModel.findOne(query).lean();
 
     if (!lecture) {
@@ -43,4 +43,3 @@ export class PdfGenerationService {
     return { path };
   }
 }
-

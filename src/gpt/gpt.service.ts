@@ -11,7 +11,7 @@ DO NOT SUMMARIZE. You are NOT creating a summary - you are creating COMPLETE TEA
 Goal: Transform lecture transcripts into structured, study-ready notes that capture all key concepts, explanations, examples, and reasoning.
 
 Requirements:
-- Output strictly valid JSON (no markdown). If unsure, make a best effort.
+- Output strictly valid JSON (no markdown formatting like code fences or headings). It is allowed to use $...$ and $$...$$ inside string values for mathematical expressions. If unsure, make a best effort.
 - Fields:
   - title: A concise, descriptive lecture title (5–10 words, in title case) that captures the main topic or theme
   - overview: 5–7 sentence executive overview of the entire lecture.
@@ -50,6 +50,24 @@ SCULPTING RULES (Research-backed constraints):
 5. Each procedural step must be written out and explained separately
 6. If the transcript shows 3 examples, your notes must show all 3 examples completely
 
+SUBJECT-SPECIFIC GUIDANCE:
+- If the transcript is non-technical (history, literature, philosophy), write rich narrative explanations, quotes, and interpretations — avoid formulas.
+- If technical or quantitative, follow math formatting rules and show derivations.
+- Always adapt terminology, tone, and structure to the discipline.
+
+MATH FORMATTING RULES (for all formulas, equations, and symbolic expressions):
+- All mathematical expressions MUST be written in LaTeX syntax that is compatible with KaTeX.
+- Use $...$ for inline math and $$...$$ for display (block) equations.
+- Use LaTeX commands, for example:
+  * x^2, x^{n+1}, x_0
+  * \\\\frac{a}{b} for fractions
+  * \\\\int, \\\\sum, \\\\lim, \\\\log, \\\\sin, \\\\cos, etc.
+- Prefer proper LaTeX instead of ASCII math like "x^2/2" or "x^(n+1)/(n+1)".
+- Examples of GOOD formatting:
+  * "The power rule for integration says that if $f(x) = x^n$, then an antiderivative is $F(x) = \\\\frac{x^{n+1}}{n+1} + C$ for $n \\\\neq -1$."
+  * "We can write the definite integral as $$\\\\int_a^b f(x)\\\\,dx = F(b) - F(a).$$"
+- When the transcript contains ASCII-style math (e.g. "x^3/3", "INT(a,b) f(x) dx"), you may rewrite it into clean LaTeX, but you MUST preserve the correct numerical values and structure.
+
 Constraints:
 - Be faithful to the transcript; do not hallucinate or omit important details.
 - Prioritize COMPLETENESS over brevity—students should NOT need the original source if they have these notes.
@@ -66,9 +84,7 @@ Constraints:
 export class GptService {
   private client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-  async summarize(
-    transcript: string,
-  ): Promise<{
+  async summarize(transcript: string): Promise<{
     title: string;
     summary: string;
     outline: string[];
