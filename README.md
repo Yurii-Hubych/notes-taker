@@ -23,13 +23,54 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Notes Taker - A lecture processing worker built with NestJS that uses BullMQ for background job processing, MongoDB for data storage, OpenAI Whisper for audio transcription, and GPT for content analysis. Now includes PDF generation capabilities with Supabase Storage integration.
+
+### Features
+
+- **Audio Processing**: Converts audio files and transcribes them using OpenAI Whisper
+- **Content Analysis**: Generates summaries, outlines, keywords, and structured sections using GPT
+- **PDF Generation**: Creates styled PDF documents from lecture results
+- **Background Processing**: Uses BullMQ for reliable job queue management
+- **Cloud Storage**: Stores generated PDFs in Supabase Storage with signed URL access
 
 ## Project setup
 
 ```bash
 $ npm install
 ```
+
+### Environment Variables
+
+Create a `.env` file in the root directory with the following variables:
+
+```env
+# MongoDB Configuration
+MONGO_URI=mongodb://localhost:27017
+MONGO_DB=notes_taker
+
+# Redis Configuration
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+
+# OpenAI Configuration
+OPENAI_API_KEY=your-openai-api-key-here
+OPENAI_MODEL=gpt-4o-mini
+
+# Temporary Directory (optional)
+TMP_DIR=/tmp
+
+# Supabase Configuration (for PDF storage)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+SUPABASE_STORAGE_PDF_BUCKET=lecture-pdfs
+```
+
+### Supabase Setup
+
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Create a storage bucket named `lecture-pdfs` (or your custom name)
+3. Set the bucket to private or public based on your requirements
+4. Copy your project URL and service role key to the `.env` file
 
 ## Compile and run the project
 
@@ -56,6 +97,61 @@ $ npm run test:e2e
 # test coverage
 $ npm run test:cov
 ```
+
+## API Endpoints
+
+### PDF Generation
+
+#### Enqueue PDF Generation Job
+
+```http
+POST /api/lectures/:lectureId/pdf
+Content-Type: application/json
+
+{
+  "userId": "optional-user-id"
+}
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "jobId": "job-uuid"
+}
+```
+
+This endpoint enqueues a background job to generate a PDF from the lecture results stored in MongoDB.
+
+#### Get PDF Download URL
+
+```http
+GET /api/lectures/:lectureId/pdf?userId=optional-user-id
+```
+
+**Response (Success):**
+```json
+{
+  "ok": true,
+  "url": "https://supabase-signed-url..."
+}
+```
+
+**Response (Not Found - 404):**
+```json
+{
+  "statusCode": 404,
+  "message": "PDF not found in Supabase storage"
+}
+```
+
+This endpoint returns a signed URL that can be used to download the generated PDF directly from Supabase Storage. The URL is valid for 1 hour by default.
+
+### Usage Flow
+
+1. **Generate PDF**: Call `POST /api/lectures/:lectureId/pdf` to enqueue the PDF generation job
+2. **Poll for completion**: Call `GET /api/lectures/:lectureId/pdf` periodically until it returns a successful response (not 404)
+3. **Download PDF**: Use the returned signed URL to download the PDF file
 
 ## Deployment
 

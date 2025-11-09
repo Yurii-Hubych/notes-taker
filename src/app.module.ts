@@ -16,6 +16,7 @@ import {
   LectureResult,
   LectureResultSchema,
 } from './db/schemas/lecture-result.schema';
+import { PdfModule } from './pdf/pdf.module';
 
 @Module({
   imports: [
@@ -30,6 +31,9 @@ import {
         OPENAI_API_KEY: Joi.string().required(),
         OPENAI_MODEL: Joi.string().default('gpt-4o-mini'),
         TMP_DIR: Joi.string().optional(),
+        SUPABASE_URL: Joi.string().uri().required(),
+        SUPABASE_SERVICE_ROLE_KEY: Joi.string().required(),
+        SUPABASE_STORAGE_PDF_BUCKET: Joi.string().default('lecture-pdfs'),
       }),
     }),
     BullModule.forRootAsync({
@@ -41,9 +45,14 @@ import {
         },
       }),
     }),
-    BullModule.registerQueue({
-      name: 'lecture-jobs',
-    }),
+    BullModule.registerQueue(
+      {
+        name: 'lecture-jobs',
+      },
+      {
+        name: 'pdf-jobs',
+      },
+    ),
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -54,6 +63,7 @@ import {
     MongooseModule.forFeature([
       { name: LectureResult.name, schema: LectureResultSchema },
     ]),
+    PdfModule,
   ],
   controllers: [LectureController],
   providers: [
