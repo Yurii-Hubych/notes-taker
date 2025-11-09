@@ -15,6 +15,9 @@ export class LectureResult {
   @Prop({ required: true })
   transcript!: string;
 
+  @Prop()
+  title?: string;
+
   @Prop({ required: true })
   summary!: string;
 

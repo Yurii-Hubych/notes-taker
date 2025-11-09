@@ -25,18 +25,33 @@ export class SupabaseStorageService {
       'lecture-pdfs';
   }
 
-  private buildPdfPath(lectureId: string, userId?: string): string {
+  private sanitizeFilename(title: string): string {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 80);
+  }
+
+  private buildPdfPath(lectureId: string, userId?: string, title?: string): string {
     const safeUserId =
       userId && userId.trim().length > 0 ? userId : 'anonymous';
-    return `${safeUserId}/${lectureId}.pdf`;
+    
+    const filename = title && title.trim().length > 0
+      ? this.sanitizeFilename(title)
+      : lectureId;
+    
+    return `${safeUserId}/${filename}.pdf`;
   }
 
   async uploadPdf(
     lectureId: string,
     userId: string | undefined,
     buffer: Buffer,
+    title?: string,
   ): Promise<{ path: string }> {
-    const filePath = this.buildPdfPath(lectureId, userId);
+    const filePath = this.buildPdfPath(lectureId, userId, title);
 
     const { error } = await this.client.storage
       .from(this.bucket)
@@ -57,9 +72,10 @@ export class SupabaseStorageService {
   async getSignedPdfUrl(
     lectureId: string,
     userId?: string,
+    title?: string,
     expiresInSeconds = 60 * 60,
   ): Promise<string> {
-    const filePath = this.buildPdfPath(lectureId, userId);
+    const filePath = this.buildPdfPath(lectureId, userId, title);
 
     const { data, error } = await this.client.storage
       .from(this.bucket)

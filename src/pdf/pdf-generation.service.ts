@@ -37,6 +37,7 @@ export class PdfGenerationService {
       lectureId,
       userId,
       buffer,
+      lecture.title,
     );
 
     return { path };

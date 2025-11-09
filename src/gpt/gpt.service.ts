@@ -13,6 +13,7 @@ Goal: Transform lecture transcripts into structured, study-ready notes that capt
 Requirements:
 - Output strictly valid JSON (no markdown). If unsure, make a best effort.
 - Fields:
+  - title: A concise, descriptive lecture title (5–10 words, in title case) that captures the main topic or theme
   - overview: 5–7 sentence executive overview of the entire lecture.
   - sections: array of objects. Each has:
     - title: clear, descriptive topic heading
@@ -68,6 +69,7 @@ export class GptService {
   async summarize(
     transcript: string,
   ): Promise<{
+    title: string;
     summary: string;
     outline: string[];
     keywords: string[];
@@ -164,9 +166,9 @@ If any answer is "no", your output is insufficient.`;
         },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.7, // Higher for more verbose, creative output
-      max_tokens: 16384, // Allow full, detailed responses
-      top_p: 0.95, // Nucleus sampling for output diversity
+      temperature: 0.7,
+      max_tokens: 16384,
+      top_p: 0.95,
     });
 
     const content = completion.choices[0]?.message?.content || '{}';
@@ -178,6 +180,7 @@ If any answer is "no", your output is insufficient.`;
     }
 
     return {
+      title: String(parsed.title ?? ''),
       summary: parsed.overview ?? parsed.summary ?? '',
       outline: Array.isArray(parsed.outline) ? parsed.outline : [],
       keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],

@@ -7,13 +7,14 @@ export interface LectureJob {
 export interface SaveResultInput {
   lectureId: string;
   transcript: string;
+  title?: string;
   summary: string;
   outline: string[];
   keywords: string[];
   userId?: string;
   sections?: Array<{
     title: string;
-    summary: string; // multi-paragraph allowed
+    summary: string;
     bullets?: string[];
   }>;
 }
